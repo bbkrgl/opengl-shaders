@@ -35,11 +35,34 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
 
     initMoonColoredTexture(moonTexturePath, moonShaderID);
 
-    
-    // TODO: Set moonVertices
-    
-    // TODO: Configure Buffers
-    
+
+    // Set moonVertices
+    for (int i = 0; i < horizontalSplitCount; i++) {
+        float a = 2*M_PI*i/horizontalSplitCount;
+        for (int j = 0; i < verticalSplitCount; j++) {
+            float b = M_PI*j/verticalSplitCount;
+
+            float x = moonRadius*sin(b)*cos(a);
+            float y = moonRadius*sin(b)*sin(a)+2600;
+            float z = moonRadius*cos(b);
+
+            moonVertices.push_back(x);
+            moonVertices.push_back(y);
+            moonVertices.push_back(z);
+
+            moonIndices.push_back(j+i*horizontalSplitCount);
+            moonIndices.push_back(j+1+i*horizontalSplitCount);
+            moonIndices.push_back(j+(i+1)*horizontalSplitCount);
+        }
+    }
+
+    // Configure Buffers
+    GLuint mv_size = worldVertices.size()*sizeof(GLfloat);
+    GLuint mi_size = worldIndices.size()*sizeof(GLuint);
+    glBufferData(GL_ARRAY_BUFFER,mv_size,0,GL_STATIC_DRAW); // TODO: Static draw???
+    glBufferSubData(GL_ARRAY_BUFFER,0,mv_size,&moonVertices[0]);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER,mi_size,&moonIndices[0],GL_STATIC_DRAW);
+
 
     // World commands
     // Load shaders
@@ -48,10 +71,33 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
     initColoredTexture(coloredTexturePath, worldShaderID);
     initGreyTexture(greyTexturePath, worldShaderID);
 
-    // TODO: Set worldVertices
-    
-    // TODO: Configure Buffers
-    
+    // Set worldVertices
+    for (int i = 0; i < horizontalSplitCount; i++) {
+        GLfloat a = 2*M_PI*i/horizontalSplitCount;
+        for (int j = 0; i < verticalSplitCount; j++) {
+            GLfloat b = M_PI*j/verticalSplitCount;
+
+            GLfloat x = radius*sin(b)*cos(a);
+            GLfloat y = radius*sin(b)*sin(a);
+            GLfloat z = radius*cos(b);
+
+            worldVertices.push_back(x);
+            worldVertices.push_back(y);
+            worldVertices.push_back(z);
+
+            worldIndices.push_back(j+i*horizontalSplitCount);
+            worldIndices.push_back(j+1+i*horizontalSplitCount);
+            worldIndices.push_back(j+(i+1)*horizontalSplitCount);
+        }
+    }
+
+    // Configure Buffers
+    GLuint wv_size = worldVertices.size()*sizeof(GLfloat);
+    GLuint wi_size = worldIndices.size()*sizeof(GLuint);
+    glBufferData(GL_ARRAY_BUFFER,wv_size,0,GL_STATIC_DRAW); // TODO: Static draw???
+    glBufferSubData(GL_ARRAY_BUFFER,0,wv_size,&worldVertices[0]);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER,wi_size,&worldIndices[0],GL_STATIC_DRAW);
+
     // Enable depth test
     glEnable(GL_DEPTH_TEST);
 
@@ -70,31 +116,31 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
         handleKeyPress(window);
 
         // TODO: Manipulate rotation variables
-        
+
         // TODO: Bind textures
-        
+
         // TODO: Use moonShaderID program
-        
+
         // TODO: Update camera at every frame
-        
+
         // TODO: Update uniform variables at every frame
-        
-        // TODO: Bind moon vertex array        
+
+        // TODO: Bind moon vertex array
 
         // TODO: Draw moon object
-        
+
         /*************************/
 
         // TODO: Use worldShaderID program
-        
+
         // TODO: Update camera at every frame
 
         // TODO: Update uniform variables at every frame
-        
+
         // TODO: Bind world vertex array
-        
+
         // TODO: Draw world object
-        
+
 
         // Swap buffers and poll events
         glfwSwapBuffers(window);
@@ -106,12 +152,12 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
     glDeleteBuffers(1, &moonVBO);
     glDeleteBuffers(1, &moonEBO);
 
-    
+
     // Delete buffers
     glDeleteBuffers(1, &VAO);
     glDeleteBuffers(1, &VBO);
     glDeleteBuffers(1, &EBO);
-   
+
     glDeleteProgram(moonShaderID);
     glDeleteProgram(worldShaderID);
 
@@ -224,7 +270,7 @@ void EclipseMap::initColoredTexture(const char *filename, GLuint shader) {
 
 
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, raw_image);
-   
+
 
     imageWidth = width;
     imageHeight = height;
@@ -304,7 +350,7 @@ void EclipseMap::initGreyTexture(const char *filename, GLuint shader) {
     width = cinfo.image_width;
 
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, raw_image);
-  
+
 
 
 
@@ -384,7 +430,7 @@ void EclipseMap::initMoonColoredTexture(const char *filename, GLuint shader) {
 
 
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, raw_image);
-   
+
 
     imageWidth = width;
     imageHeight = height;

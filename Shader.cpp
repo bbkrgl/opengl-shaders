@@ -14,7 +14,8 @@ using namespace std;
 
 #include "Shader.h"
 
-GLuint initShaders(const string& vertexShaderName, const string& fragmentShaderName) {
+GLuint initShaders(const string& vertexShaderName, const string& fragmentShaderName)
+{
 
   GLuint idProgramShader = glCreateProgram();
 
@@ -74,7 +75,8 @@ GLuint initFragmentShader(const string& filename)
 	  return fs;
 }
 
-bool readDataFromFile(const string& fileName, string &data) {
+bool readDataFromFile(const string& fileName, string &data)
+{
     fstream myfile;
 
     myfile.open(fileName.c_str(), std::ios::in);

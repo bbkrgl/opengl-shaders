@@ -68,11 +68,11 @@ public:
     float moonImageWidth;
     float moonRadius = 162;
 
-    vector<float> worldVertices;
-    vector<unsigned int> worldIndices;
+    vector<GLfloat> worldVertices;
+    vector<GLuint> worldIndices;
 
-    vector<float> moonVertices;
-    vector<unsigned int> moonIndices;
+    vector<GLfloat> moonVertices;
+    vector<GLuint> moonIndices;
 
     GLFWwindow *openWindow(const char *windowName, int width, int height);
 
