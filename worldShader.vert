@@ -49,7 +49,7 @@ void main()
     data.Position = vec3(P.x,P.y,P.z);
 
     // set gl_Position variable correctly to give the transformed vertex position
-    gl_Position = ProjectionMatrix * MVP * vec4(VertexPosition, 1); // this is a placeholder. It does not correctly set the position
+    gl_Position = ProjectionMatrix * MVP * vec4(VertexPosition, 1);
 
     CameraVector = cameraPosition - data.Position;
     LightVector = lightPosition - data.Position;

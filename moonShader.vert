@@ -37,10 +37,9 @@ void main()
 {
     // get orbitDegree value, compute new x, y coordinates
     // there won't be height in moon shader
- 
+
    // set gl_Position variable correctly to give the transformed vertex position
 
 
-    gl_Position = vec4(0,0,0,0); // this is a placeholder. It does not correctly set the position
-
+    gl_Position = ProjectionMatrix * MVP * vec4(VertexPosition, 1);
 }

@@ -1,4 +1,6 @@
 #include "EclipseMap.h"
+#include <cassert>
+#include <glm/ext/quaternion_geometric.hpp>
 
 using namespace std;
 
@@ -35,8 +37,10 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
 
     initMoonColoredTexture(moonTexturePath, moonShaderID);
 
-
     // Set moonVertices
+    vector<GLfloat> moonNormals;
+    vector<GLfloat> moonTex;
+
     for (int i = 0; i < horizontalSplitCount; i++) {
         float a = 2*M_PI*i/horizontalSplitCount;
         for (int j = 0; i < verticalSplitCount; j++) {
@@ -50,19 +54,56 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
             moonVertices.push_back(y);
             moonVertices.push_back(z);
 
+            glm::vec3 n(x,y-2600,z);
+            n = glm::normalize(n);
+            moonNormals.push_back(n.x);
+            moonNormals.push_back(n.y);
+            moonNormals.push_back(n.z);
+
             moonIndices.push_back(j+i*horizontalSplitCount);
             moonIndices.push_back(j+1+i*horizontalSplitCount);
             moonIndices.push_back(j+(i+1)*horizontalSplitCount);
+
+            moonTex.push_back(((float)i)/horizontalSplitCount);
+            moonTex.push_back(((float)j)/verticalSplitCount);
         }
     }
 
     // Configure Buffers
-    GLuint mv_size = worldVertices.size()*sizeof(GLfloat);
-    GLuint mi_size = worldIndices.size()*sizeof(GLuint);
-    glBufferData(GL_ARRAY_BUFFER,mv_size,0,GL_STATIC_DRAW); // TODO: Static draw???
-    glBufferSubData(GL_ARRAY_BUFFER,0,mv_size,&moonVertices[0]);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER,mi_size,&moonIndices[0],GL_STATIC_DRAW);
+    GLuint mv_size = moonVertices.size()*sizeof(GLfloat);
+    GLuint mn_size = moonNormals.size()*sizeof(GLfloat);
+    GLuint mi_size = moonIndices.size()*sizeof(GLuint);
+    GLuint mt_size = moonTex.size()*sizeof(GLuint);
 
+    glGenBuffers(1,&moonVBO);
+    glGenVertexArrays(1,&moonVAO);
+
+    glBindVertexArray(moonVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, moonVBO);
+
+    glBufferData(GL_ARRAY_BUFFER,mv_size+mn_size,0,GL_DYNAMIC_DRAW); // TODO: Static draw???
+    glBufferSubData(GL_ARRAY_BUFFER,0,mv_size,&moonVertices[0]);
+    glBufferSubData(GL_ARRAY_BUFFER,0,mn_size,&moonNormals[0]);
+    glBufferSubData(GL_ARRAY_BUFFER,0,mt_size,&moonTex[0]);
+
+    glGenBuffers(1,&moonEBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, moonEBO);
+
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER,mi_size,&moonIndices[0],GL_STATIC_DRAW); // Vertices in the same buffer, transform???
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8*sizeof(GLuint), (void*)0);
+	glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8*sizeof(GLuint), (void*)(3*sizeof(GLuint)));
+	glEnableVertexAttribArray(1);
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8*sizeof(GLuint), (void*)(6*sizeof(GLuint)));
+	glEnableVertexAttribArray(2);
+
+    GLint lightPos_id = glGetUniformLocation(moonShaderID, "lightPosition");
+    GLint camPos_id = glGetUniformLocation(moonShaderID, "cameraPosition");
+    GLint pMat_id = glGetUniformLocation(moonShaderID, "ProjectionMatrix");
+    GLint viewMat_id = glGetUniformLocation(moonShaderID, "ViewMatrix");
+    GLint normalMat_id = glGetUniformLocation(moonShaderID, "NormalMatrix");
+    GLint mvp_id = glGetUniformLocation(moonShaderID, "MVP");
 
     // World commands
     // Load shaders
@@ -72,6 +113,9 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
     initGreyTexture(greyTexturePath, worldShaderID);
 
     // Set worldVertices
+    vector<GLfloat> worldNormals;
+    vector<GLfloat> worldTex;
+
     for (int i = 0; i < horizontalSplitCount; i++) {
         GLfloat a = 2*M_PI*i/horizontalSplitCount;
         for (int j = 0; i < verticalSplitCount; j++) {
@@ -85,18 +129,49 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
             worldVertices.push_back(y);
             worldVertices.push_back(z);
 
+            glm::vec3 n(x,y,z);
+            n = glm::normalize(n);
+            worldNormals.push_back(n.x);
+            worldNormals.push_back(n.y);
+            worldNormals.push_back(n.z);
+
             worldIndices.push_back(j+i*horizontalSplitCount);
             worldIndices.push_back(j+1+i*horizontalSplitCount);
             worldIndices.push_back(j+(i+1)*horizontalSplitCount);
+
+            worldTex.push_back(((float)i)/horizontalSplitCount);
+            worldTex.push_back(((float)j)/verticalSplitCount);
         }
     }
 
     // Configure Buffers
     GLuint wv_size = worldVertices.size()*sizeof(GLfloat);
+    GLuint wn_size = worldNormals.size()*sizeof(GLfloat);
     GLuint wi_size = worldIndices.size()*sizeof(GLuint);
-    glBufferData(GL_ARRAY_BUFFER,wv_size,0,GL_STATIC_DRAW); // TODO: Static draw???
+    GLuint wt_size = worldTex.size()*sizeof(GLuint);
+
+    glGenBuffers(1,&VBO);
+    glGenVertexArrays(1,&VAO);
+
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+
+    glBufferData(GL_ARRAY_BUFFER,wv_size+wn_size+wt_size,0,GL_DYNAMIC_DRAW); // TODO: Static draw???
     glBufferSubData(GL_ARRAY_BUFFER,0,wv_size,&worldVertices[0]);
+    glBufferSubData(GL_ARRAY_BUFFER,0,wn_size,&worldNormals[0]);
+    glBufferSubData(GL_ARRAY_BUFFER,0,wt_size,&worldTex[0]);
+
+    glGenBuffers(1,&EBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+
     glBufferData(GL_ELEMENT_ARRAY_BUFFER,wi_size,&worldIndices[0],GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8*sizeof(GLuint), (void*)0);
+	glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8*sizeof(GLuint), (void*)(3*sizeof(GLuint)));
+	glEnableVertexAttribArray(1);
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8*sizeof(GLuint), (void*)(6*sizeof(GLuint)));
+	glEnableVertexAttribArray(2);
 
     // Enable depth test
     glEnable(GL_DEPTH_TEST);
@@ -117,29 +192,35 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
 
         // TODO: Manipulate rotation variables
 
+
         // TODO: Bind textures
 
         // TODO: Use moonShaderID program
+        glUseProgram(moonShaderID);
 
         // TODO: Update camera at every frame
 
         // TODO: Update uniform variables at every frame
 
         // TODO: Bind moon vertex array
+        glBindVertexArray(moonVAO);
 
         // TODO: Draw moon object
-
+        glDrawElements(GL_TRIANGLES, moonVertices.size(), GL_UNSIGNED_INT, 0);
         /*************************/
 
         // TODO: Use worldShaderID program
+        glUseProgram(worldShaderID);
 
         // TODO: Update camera at every frame
 
         // TODO: Update uniform variables at every frame
 
         // TODO: Bind world vertex array
+        glBindVertexArray(VAO);
 
         // TODO: Draw world object
+        glDrawElements(GL_TRIANGLES, worldVertices.size(), GL_UNSIGNED_INT, 0);
 
 
         // Swap buffers and poll events
