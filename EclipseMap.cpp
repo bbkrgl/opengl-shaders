@@ -43,7 +43,7 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
 
     for (int i = 0; i < horizontalSplitCount; i++) {
         float a = 2*M_PI*i/horizontalSplitCount;
-        for (int j = 0; i < verticalSplitCount; j++) {
+        for (int j = 0; j < verticalSplitCount; j++) {
             float b = M_PI*j/verticalSplitCount;
 
             float x = moonRadius*sin(b)*cos(a);
@@ -81,7 +81,7 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
     glBindVertexArray(moonVAO);
     glBindBuffer(GL_ARRAY_BUFFER, moonVBO);
 
-    glBufferData(GL_ARRAY_BUFFER,mv_size+mn_size,0,GL_DYNAMIC_DRAW); // TODO: Static draw???
+    glBufferData(GL_ARRAY_BUFFER,mv_size+mn_size+mt_size,0,GL_DYNAMIC_DRAW); // TODO: Static draw???
     glBufferSubData(GL_ARRAY_BUFFER,0,mv_size,&moonVertices[0]);
     glBufferSubData(GL_ARRAY_BUFFER,0,mn_size,&moonNormals[0]);
     glBufferSubData(GL_ARRAY_BUFFER,0,mt_size,&moonTex[0]);
@@ -89,21 +89,27 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
     glGenBuffers(1,&moonEBO);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, moonEBO);
 
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER,mi_size,&moonIndices[0],GL_STATIC_DRAW); // Vertices in the same buffer, transform???
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER,mi_size,&moonIndices[0],GL_STATIC_DRAW); // Vertices in the same buffer, transform??
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8*sizeof(GLuint), (void*)0);
 	glEnableVertexAttribArray(0);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8*sizeof(GLuint), (void*)(3*sizeof(GLuint)));
 	glEnableVertexAttribArray(1);
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8*sizeof(GLuint), (void*)(6*sizeof(GLuint)));
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8*sizeof(GLuint), (void*)(6*sizeof(GLuint)));
 	glEnableVertexAttribArray(2);
 
-    GLint lightPos_id = glGetUniformLocation(moonShaderID, "lightPosition");
-    GLint camPos_id = glGetUniformLocation(moonShaderID, "cameraPosition");
-    GLint pMat_id = glGetUniformLocation(moonShaderID, "ProjectionMatrix");
-    GLint viewMat_id = glGetUniformLocation(moonShaderID, "ViewMatrix");
-    GLint normalMat_id = glGetUniformLocation(moonShaderID, "NormalMatrix");
-    GLint mvp_id = glGetUniformLocation(moonShaderID, "MVP");
+    GLint moon_lightPos_id = glGetUniformLocation(moonShaderID, "lightPosition");
+    glUniform3fv(moon_lightPos_id, 1, glm::value_ptr(lightPos));
+    GLint moon_camPos_id = glGetUniformLocation(moonShaderID, "cameraPosition");
+    glUniform3fv(moon_lightPos_id, 1, glm::value_ptr(cameraStartPosition));
+
+    GLint moon_pMat_id = glGetUniformLocation(moonShaderID, "ProjectionMatrix");
+    GLint moon_viewMat_id = glGetUniformLocation(moonShaderID, "ViewMatrix");
+    GLint moon_normalMat_id = glGetUniformLocation(moonShaderID, "NormalMatrix");
+    GLint moon_mvp_id = glGetUniformLocation(moonShaderID, "MVP");
+    GLint moon_height_f = glGetUniformLocation(moonShaderID, "heightFactor");
+    GLint moon_img_w = glGetUniformLocation(moonShaderID, "imageWidth");
+    GLint moon_img_h = glGetUniformLocation(moonShaderID, "imageHeight");
 
     // World commands
     // Load shaders
@@ -118,7 +124,7 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
 
     for (int i = 0; i < horizontalSplitCount; i++) {
         GLfloat a = 2*M_PI*i/horizontalSplitCount;
-        for (int j = 0; i < verticalSplitCount; j++) {
+        for (int j = 0; j < verticalSplitCount; j++) {
             GLfloat b = M_PI*j/verticalSplitCount;
 
             GLfloat x = radius*sin(b)*cos(a);
@@ -170,7 +176,7 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
 	glEnableVertexAttribArray(0);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8*sizeof(GLuint), (void*)(3*sizeof(GLuint)));
 	glEnableVertexAttribArray(1);
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8*sizeof(GLuint), (void*)(6*sizeof(GLuint)));
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8*sizeof(GLuint), (void*)(6*sizeof(GLuint)));
 	glEnableVertexAttribArray(2);
 
     // Enable depth test
@@ -210,17 +216,17 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
         /*************************/
 
         // TODO: Use worldShaderID program
-        glUseProgram(worldShaderID);
+        //glUseProgram(worldShaderID);
 
         // TODO: Update camera at every frame
 
         // TODO: Update uniform variables at every frame
 
         // TODO: Bind world vertex array
-        glBindVertexArray(VAO);
+        //glBindVertexArray(VAO);
 
         // TODO: Draw world object
-        glDrawElements(GL_TRIANGLES, worldVertices.size(), GL_UNSIGNED_INT, 0);
+        //glDrawElements(GL_TRIANGLES, worldVertices.size(), GL_UNSIGNED_INT, 0);
 
 
         // Swap buffers and poll events

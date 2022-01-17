@@ -41,5 +41,5 @@ void main()
    // set gl_Position variable correctly to give the transformed vertex position
 
 
-    gl_Position = ProjectionMatrix * MVP * vec4(VertexPosition, 1);
+    gl_Position = vec4(VertexPosition, 1);
 }

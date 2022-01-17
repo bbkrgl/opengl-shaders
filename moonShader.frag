@@ -32,9 +32,9 @@ void main()
     vec2 textureCoordinate = vec2(0, 0);
     vec4 texColor = texture(MoonTexColor, textureCoordinate);
 
-    vec3 ambient = vec3(0, 0, 0);    
-    vec3 diffuse = vec3(0, 0, 0);
-    vec3 spec = vec3(0, 0, 0);
+    vec3 ambient = vec3(0, 0, 1);
+    vec3 diffuse = vec3(0, 0, 1);
+    vec3 spec = vec3(0, 0, 1);
 
     FragColor = vec4(ambient+diffuse+spec, 1.0f);
 
