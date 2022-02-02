@@ -100,16 +100,26 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
 
     GLint moon_lightPos_id = glGetUniformLocation(moonShaderID, "lightPosition");
     glUniform3fv(moon_lightPos_id, 1, glm::value_ptr(lightPos));
+
     GLint moon_camPos_id = glGetUniformLocation(moonShaderID, "cameraPosition");
     glUniform3fv(moon_lightPos_id, 1, glm::value_ptr(cameraStartPosition));
 
+    GLint moon_height_f = glGetUniformLocation(moonShaderID, "heightFactor");
+    glUniform1f(moon_height_f,(GLfloat) heightFactor);
+
+    GLint moon_img_w = glGetUniformLocation(moonShaderID, "imageWidth");
+    moonImageWidth = imageWidth;
+    glUniform1f(moon_img_w,(GLfloat) moonImageWidth);
+
+    GLint moon_img_h = glGetUniformLocation(moonShaderID, "imageHeight");
+    moonImageHeight = imageHeight;
+    glUniform1f(moon_img_h,(GLfloat) moonImageHeight);
+
     GLint moon_pMat_id = glGetUniformLocation(moonShaderID, "ProjectionMatrix");
+
     GLint moon_viewMat_id = glGetUniformLocation(moonShaderID, "ViewMatrix");
     GLint moon_normalMat_id = glGetUniformLocation(moonShaderID, "NormalMatrix");
     GLint moon_mvp_id = glGetUniformLocation(moonShaderID, "MVP");
-    GLint moon_height_f = glGetUniformLocation(moonShaderID, "heightFactor");
-    GLint moon_img_w = glGetUniformLocation(moonShaderID, "imageWidth");
-    GLint moon_img_h = glGetUniformLocation(moonShaderID, "imageHeight");
 
     // World commands
     // Load shaders
