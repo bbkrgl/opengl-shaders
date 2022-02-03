@@ -87,7 +87,7 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
     glm::mat4 camMatrix = glm::lookAt(cameraPosition, cameraDirection, cameraUp);
 
     // Set moonVertices
-    createSphere(moonRadius, glm::vec3(0,2600,0), moonVertices, moonIndices);
+    createSphere(moonRadius, glm::vec3(0,0,0), moonVertices, moonIndices);
 
     // Configure Buffers
     GLuint mv_size = moonVertices.size()*sizeof(float);
@@ -98,7 +98,7 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
 
     glBindVertexArray(moonVAO);
     glBindBuffer(GL_ARRAY_BUFFER, moonVBO);
-    glBufferData(GL_ARRAY_BUFFER, mv_size, moonVertices.data(), GL_DYNAMIC_DRAW); // TODO: Static draw???
+    glBufferData(GL_ARRAY_BUFFER, mv_size, moonVertices.data(), GL_DYNAMIC_DRAW);
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), (GLvoid*)0);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), (GLvoid*)(sizeof(float)*3));
@@ -127,10 +127,6 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
     GLint moon_img_h = glGetUniformLocation(moonShaderID, "imageHeight");
     glUniform1f(moon_img_h, (GLfloat) moonImageHeight);
 
-
-    glm::mat4 moonModellingMatrix = glm::mat4(1); // TODO:Change???
-    glm::mat4 moonNormalMatrix = glm::mat4(1); // TODO:Change???
-
     GLint moon_pMat_id = glGetUniformLocation(moonShaderID, "ProjectionMatrix");
     glUniformMatrix4fv(moon_pMat_id, 1, GL_FALSE, glm::value_ptr(perspectiveMatrix));
 
@@ -138,10 +134,10 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
     glUniformMatrix4fv(moon_viewMat_id, 1, GL_FALSE, glm::value_ptr(camMatrix));
 
     GLint moon_normalMat_id = glGetUniformLocation(moonShaderID, "NormalMatrix");
-    glUniformMatrix4fv(moon_normalMat_id, 1, GL_FALSE, glm::value_ptr(moonNormalMatrix));
-
     GLint moon_mvp_id = glGetUniformLocation(moonShaderID, "MVP");
-    glUniformMatrix4fv(moon_mvp_id, 1, GL_FALSE, glm::value_ptr(moonModellingMatrix));
+
+    float dO = glm::radians(0.02);
+    GLint moon_orbitd_id = glGetUniformLocation(moonShaderID, "orbitDegree");
 
     // World commands
     // Load shaders
@@ -164,7 +160,7 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
 
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, wv_size, worldVertices.data(), GL_DYNAMIC_DRAW); // TODO: Static draw???
+    glBufferData(GL_ARRAY_BUFFER, wv_size, worldVertices.data(), GL_DYNAMIC_DRAW);
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), (GLvoid*)0);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), (GLvoid*)(sizeof(float)*3));
@@ -193,9 +189,8 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
     GLint world_img_h = glGetUniformLocation(worldShaderID, "imageHeight");
     glUniform1f(world_img_h, (GLfloat) imageHeight);
 
-
-    glm::mat4 worldModellingMatrix = glm::mat4(1); // TODO:Change???
-    glm::mat4 worldNormalMatrix = glm::mat4(1); // TODO:Change???
+    float E = 0.0;
+    float dE = 0.5/horizontalSplitCount;
 
     GLint world_pMat_id = glGetUniformLocation(worldShaderID, "ProjectionMatrix");
     glUniformMatrix4fv(world_pMat_id, 1, GL_FALSE, glm::value_ptr(perspectiveMatrix));
@@ -204,10 +199,7 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
     glUniformMatrix4fv(world_viewMat_id, 1, GL_FALSE, glm::value_ptr(camMatrix));
 
     GLint world_normalMat_id = glGetUniformLocation(worldShaderID, "NormalMatrix");
-    glUniformMatrix4fv(world_normalMat_id, 1, GL_FALSE, glm::value_ptr(worldNormalMatrix));
-
     GLint world_mvp_id = glGetUniformLocation(worldShaderID, "MVP");
-    glUniformMatrix4fv(world_mvp_id, 1, GL_FALSE, glm::value_ptr(worldModellingMatrix));
 
     // Enable depth test
     glEnable(GL_DEPTH_TEST);
@@ -224,38 +216,44 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
         // TODO: Handle key presses
         handleKeyPress(window);
 
-        // TODO: Manipulate rotation variables
-
-
-        // TODO: Bind textures
-
-        // TODO: Use moonShaderID program
         glUseProgram(moonShaderID);
 
         // TODO: Update camera at every frame
 
-        // TODO: Update uniform variables at every frame
+        glm::mat4 moonModellingMatrix = glm::rotate(glm::mat4(1), E, glm::vec3(0,0,1));
+        glm::mat4 moonNormalMatrix = moonModellingMatrix;
+        moonModellingMatrix = glm::translate(glm::mat4(1), glm::vec3(0,2600,0)) * moonModellingMatrix;
 
-        // TODO: Bind moon vertex array
+        glUniformMatrix4fv(moon_normalMat_id, 1, GL_FALSE, glm::value_ptr(moonNormalMatrix));
+        glUniformMatrix4fv(moon_mvp_id, 1, GL_FALSE, glm::value_ptr(moonModellingMatrix));
+        glUniform1f(moon_orbitd_id, orbitDegree);
+
+        orbitDegree += dO;
+        if (orbitDegree >= 2*M_PI)
+            orbitDegree = 0;
+
         glBindVertexArray(moonVAO);
 
-        // TODO: Draw moon object
         glDrawElements(GL_TRIANGLES, moonVertices.size(), GL_UNSIGNED_INT, (void*)0);
         /*************************/
 
-        // TODO: Use worldShaderID program
         glUseProgram(worldShaderID);
 
         // TODO: Update camera at every frame
 
-        // TODO: Update uniform variables at every frame
+        glm::mat4 worldModellingMatrix = glm::rotate(glm::mat4(1), E, glm::vec3(0,0,1));
+        glm::mat4 worldNormalMatrix = worldModellingMatrix;
 
-        // TODO: Bind world vertex array
+        glUniformMatrix4fv(world_mvp_id, 1, GL_FALSE, glm::value_ptr(worldModellingMatrix));
+        glUniformMatrix4fv(world_normalMat_id, 1, GL_FALSE, glm::value_ptr(worldNormalMatrix));
+
+        E += dE;
+        if (E >= 2*M_PI)
+            E = 0.0;
+
         glBindVertexArray(VAO);
 
-        // TODO: Draw world object
         glDrawElements(GL_TRIANGLES, worldVertices.size(), GL_UNSIGNED_INT, (void*)0);
-
 
         // Swap buffers and poll events
         glfwSwapBuffers(window);

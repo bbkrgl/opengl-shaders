@@ -28,18 +28,16 @@ vec3 diffuseLightColor = vec3(1.0f);
 
 void main()
 {
-    // Calculate texture coordinate based on data.TexCoord
     vec2 texCoord = data.TexCoord;
     vec4 texColor = texture(TexColor, texCoord);
 
     vec3 ambient = ambientLightColor*ambientReflectenceCoefficient;
 
     float diff_c = max(dot(data.Normal, LightVector), 0.0);
-    //diffuseReflectenceCoefficient = texColor.xyz;
-    vec3 diffuse = diff_c*diffuseLightColor*diffuseReflectenceCoefficient; // TODO: Check if it is correct
+    vec3 diffuse = diff_c*diffuseLightColor*diffuseReflectenceCoefficient;
 
-    vec3 r = reflect(-LightVector, data.Normal);
-    float spec = pow(max(dot(r, CameraVector), 0.0), SpecularExponent);
+    vec3 H = normalize(CameraVector + LightVector);
+    float spec = pow(max(dot(H, data.Normal), 0.0), SpecularExponent);
     vec3 specular = spec*specularReflectenceCoefficient*specularLightColor;
 
     FragColor = vec4((diffuse+ambient+spec)*texColor.xyz, 1.0);

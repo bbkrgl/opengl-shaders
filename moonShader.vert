@@ -40,7 +40,10 @@ void main()
 
    // set gl_Position variable correctly to give the transformed vertex position
 
-    vec4 pos = ProjectionMatrix * ViewMatrix * MVP * vec4(VertexPosition, 1);
+    vec3 orbitPos = vec3(VertexPosition.x * cos(orbitDegree) - VertexPosition.y*sin(orbitDegree),
+            VertexPosition.x * sin(orbitDegree) + VertexPosition.y*cos(orbitDegree),
+            VertexPosition.z);
+    vec4 pos = ProjectionMatrix * ViewMatrix * MVP * vec4(orbitPos, 1);
     vec4 normal = NormalMatrix * vec4(VertexNormal, 1);
 
     LightVector = normalize(lightPosition - pos.xyz);
