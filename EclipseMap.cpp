@@ -1,6 +1,4 @@
 #include "EclipseMap.h"
-#include <cassert>
-#include <glm/ext/quaternion_geometric.hpp>
 
 using namespace std;
 
@@ -27,6 +25,53 @@ struct triangle {
                                                                            vertex3(vertex3) {}
 };
 
+void EclipseMap::createSphere(int radius, glm::vec3 pos, vector<float>& vertices, vector<int>& indices)
+{
+    for (int i = 0; i <= verticalSplitCount; i++) {
+        float b = M_PI*i/verticalSplitCount;
+
+        for (int j = 0; j <= horizontalSplitCount; j++) {
+            float a = 2*M_PI*j/horizontalSplitCount;
+
+            float x = radius*sin(b)*cos(a)+pos.x;
+            float y = radius*sin(b)*sin(a)+pos.y;
+            float z = radius*cos(b)+pos.z;
+
+            vertices.push_back(x);
+            vertices.push_back(y);
+            vertices.push_back(z);
+
+            glm::vec3 n = glm::vec3(x,y,z)-pos;
+            n = glm::normalize(n);
+            vertices.push_back(n.x);
+            vertices.push_back(n.y);
+            vertices.push_back(n.z);
+
+            vertices.push_back(((float)j)/horizontalSplitCount);
+            vertices.push_back(((float)i)/verticalSplitCount);
+        }
+    }
+
+    for (int i = 0; i < verticalSplitCount; i++) {
+        int k1 = i*(horizontalSplitCount+1);
+        int k2 = k1+horizontalSplitCount+1;
+
+        for (int j = 0; j < horizontalSplitCount; j++, k1++, k2++) {
+            if (i != 0) {
+                indices.push_back(k1);
+                indices.push_back(k2);
+                indices.push_back(k1+1);
+            }
+
+            if (i != (verticalSplitCount-1)) {
+                indices.push_back(k1+1);
+                indices.push_back(k2);
+                indices.push_back(k2+1);
+            }
+        }
+    }
+}
+
 void EclipseMap::Render(const char *coloredTexturePath, const char *greyTexturePath, const char *moonTexturePath) {
     // Open window
     GLFWwindow *window = openWindow(windowName, screenWidth, screenHeight);
@@ -35,159 +80,134 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
     // Load shaders
     GLuint moonShaderID = initShaders("moonShader.vert", "moonShader.frag");
 
+    glActiveTexture(GL_TEXTURE2);
     initMoonColoredTexture(moonTexturePath, moonShaderID);
 
+    glm::mat4 perspectiveMatrix = glm::perspective(glm::radians(projectionAngle), aspectRatio, near, far);
+    glm::mat4 camMatrix = glm::lookAt(cameraPosition, cameraDirection, cameraUp);
+
     // Set moonVertices
-    vector<GLfloat> moonNormals;
-    vector<GLfloat> moonTex;
-
-    for (int i = 0; i < horizontalSplitCount; i++) {
-        float a = 2*M_PI*i/horizontalSplitCount;
-        for (int j = 0; j < verticalSplitCount; j++) {
-            float b = M_PI*j/verticalSplitCount;
-
-            float x = moonRadius*sin(b)*cos(a);
-            float y = moonRadius*sin(b)*sin(a)+2600;
-            float z = moonRadius*cos(b);
-
-            moonVertices.push_back(x);
-            moonVertices.push_back(y);
-            moonVertices.push_back(z);
-
-            glm::vec3 n(x,y-2600,z);
-            n = glm::normalize(n);
-            moonNormals.push_back(n.x);
-            moonNormals.push_back(n.y);
-            moonNormals.push_back(n.z);
-
-            moonIndices.push_back(j+i*horizontalSplitCount);
-            moonIndices.push_back(j+1+i*horizontalSplitCount);
-            moonIndices.push_back(j+(i+1)*horizontalSplitCount);
-
-            moonTex.push_back(((float)i)/horizontalSplitCount);
-            moonTex.push_back(((float)j)/verticalSplitCount);
-        }
-    }
+    createSphere(moonRadius, glm::vec3(0,2600,0), moonVertices, moonIndices);
 
     // Configure Buffers
-    GLuint mv_size = moonVertices.size()*sizeof(GLfloat);
-    GLuint mn_size = moonNormals.size()*sizeof(GLfloat);
-    GLuint mi_size = moonIndices.size()*sizeof(GLuint);
-    GLuint mt_size = moonTex.size()*sizeof(GLuint);
+    GLuint mv_size = moonVertices.size()*sizeof(float);
+    GLuint mi_size = moonIndices.size()*sizeof(int);
 
-    glGenBuffers(1,&moonVBO);
-    glGenVertexArrays(1,&moonVAO);
+    glGenBuffers(1, &moonVBO);
+    glGenVertexArrays(1, &moonVAO);
 
     glBindVertexArray(moonVAO);
     glBindBuffer(GL_ARRAY_BUFFER, moonVBO);
+    glBufferData(GL_ARRAY_BUFFER, mv_size, moonVertices.data(), GL_DYNAMIC_DRAW); // TODO: Static draw???
 
-    glBufferData(GL_ARRAY_BUFFER,mv_size+mn_size+mt_size,0,GL_DYNAMIC_DRAW); // TODO: Static draw???
-    glBufferSubData(GL_ARRAY_BUFFER,0,mv_size,&moonVertices[0]);
-    glBufferSubData(GL_ARRAY_BUFFER,0,mn_size,&moonNormals[0]);
-    glBufferSubData(GL_ARRAY_BUFFER,0,mt_size,&moonTex[0]);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), (GLvoid*)0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), (GLvoid*)(sizeof(float)*3));
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8*sizeof(float), (GLvoid*)(sizeof(float)*6));
 
-    glGenBuffers(1,&moonEBO);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, moonEBO);
-
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER,mi_size,&moonIndices[0],GL_STATIC_DRAW); // Vertices in the same buffer, transform??
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8*sizeof(GLuint), (void*)0);
-	glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8*sizeof(GLuint), (void*)(3*sizeof(GLuint)));
+    glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8*sizeof(GLuint), (void*)(6*sizeof(GLuint)));
 	glEnableVertexAttribArray(2);
+
+    glGenBuffers(1, &moonEBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, moonEBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mi_size, moonIndices.data(), GL_DYNAMIC_DRAW);
 
     GLint moon_lightPos_id = glGetUniformLocation(moonShaderID, "lightPosition");
     glUniform3fv(moon_lightPos_id, 1, glm::value_ptr(lightPos));
 
     GLint moon_camPos_id = glGetUniformLocation(moonShaderID, "cameraPosition");
-    glUniform3fv(moon_lightPos_id, 1, glm::value_ptr(cameraStartPosition));
+    glUniform3fv(moon_lightPos_id, 1, glm::value_ptr(cameraPosition));
 
     GLint moon_height_f = glGetUniformLocation(moonShaderID, "heightFactor");
-    glUniform1f(moon_height_f,(GLfloat) heightFactor);
+    glUniform1f(moon_height_f, (GLfloat) heightFactor);
 
     GLint moon_img_w = glGetUniformLocation(moonShaderID, "imageWidth");
-    moonImageWidth = imageWidth;
-    glUniform1f(moon_img_w,(GLfloat) moonImageWidth);
+    glUniform1f(moon_img_w, (GLfloat) moonImageWidth);
 
     GLint moon_img_h = glGetUniformLocation(moonShaderID, "imageHeight");
-    moonImageHeight = imageHeight;
-    glUniform1f(moon_img_h,(GLfloat) moonImageHeight);
+    glUniform1f(moon_img_h, (GLfloat) moonImageHeight);
+
+
+    glm::mat4 moonModellingMatrix = glm::mat4(1); // TODO:Change???
+    glm::mat4 moonNormalMatrix = glm::mat4(1); // TODO:Change???
 
     GLint moon_pMat_id = glGetUniformLocation(moonShaderID, "ProjectionMatrix");
+    glUniformMatrix4fv(moon_pMat_id, 1, GL_FALSE, glm::value_ptr(perspectiveMatrix));
 
     GLint moon_viewMat_id = glGetUniformLocation(moonShaderID, "ViewMatrix");
+    glUniformMatrix4fv(moon_viewMat_id, 1, GL_FALSE, glm::value_ptr(camMatrix));
+
     GLint moon_normalMat_id = glGetUniformLocation(moonShaderID, "NormalMatrix");
+    glUniformMatrix4fv(moon_normalMat_id, 1, GL_FALSE, glm::value_ptr(moonNormalMatrix));
+
     GLint moon_mvp_id = glGetUniformLocation(moonShaderID, "MVP");
+    glUniformMatrix4fv(moon_mvp_id, 1, GL_FALSE, glm::value_ptr(moonModellingMatrix));
 
     // World commands
     // Load shaders
     GLuint worldShaderID = initShaders("worldShader.vert", "worldShader.frag");
 
+    glActiveTexture(GL_TEXTURE0);
     initColoredTexture(coloredTexturePath, worldShaderID);
+    glActiveTexture(GL_TEXTURE1);
     initGreyTexture(greyTexturePath, worldShaderID);
 
     // Set worldVertices
-    vector<GLfloat> worldNormals;
-    vector<GLfloat> worldTex;
-
-    for (int i = 0; i < horizontalSplitCount; i++) {
-        GLfloat a = 2*M_PI*i/horizontalSplitCount;
-        for (int j = 0; j < verticalSplitCount; j++) {
-            GLfloat b = M_PI*j/verticalSplitCount;
-
-            GLfloat x = radius*sin(b)*cos(a);
-            GLfloat y = radius*sin(b)*sin(a);
-            GLfloat z = radius*cos(b);
-
-            worldVertices.push_back(x);
-            worldVertices.push_back(y);
-            worldVertices.push_back(z);
-
-            glm::vec3 n(x,y,z);
-            n = glm::normalize(n);
-            worldNormals.push_back(n.x);
-            worldNormals.push_back(n.y);
-            worldNormals.push_back(n.z);
-
-            worldIndices.push_back(j+i*horizontalSplitCount);
-            worldIndices.push_back(j+1+i*horizontalSplitCount);
-            worldIndices.push_back(j+(i+1)*horizontalSplitCount);
-
-            worldTex.push_back(((float)i)/horizontalSplitCount);
-            worldTex.push_back(((float)j)/verticalSplitCount);
-        }
-    }
+    createSphere(radius, glm::vec3(0,0,0), worldVertices, worldIndices);
 
     // Configure Buffers
-    GLuint wv_size = worldVertices.size()*sizeof(GLfloat);
-    GLuint wn_size = worldNormals.size()*sizeof(GLfloat);
-    GLuint wi_size = worldIndices.size()*sizeof(GLuint);
-    GLuint wt_size = worldTex.size()*sizeof(GLuint);
+    GLuint wv_size = worldVertices.size()*sizeof(float);
+    GLuint wi_size = worldIndices.size()*sizeof(int);
 
-    glGenBuffers(1,&VBO);
-    glGenVertexArrays(1,&VAO);
+    glGenBuffers(1, &VBO);
+    glGenVertexArrays(1, &VAO);
 
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, wv_size, worldVertices.data(), GL_DYNAMIC_DRAW); // TODO: Static draw???
 
-    glBufferData(GL_ARRAY_BUFFER,wv_size+wn_size+wt_size,0,GL_DYNAMIC_DRAW); // TODO: Static draw???
-    glBufferSubData(GL_ARRAY_BUFFER,0,wv_size,&worldVertices[0]);
-    glBufferSubData(GL_ARRAY_BUFFER,0,wn_size,&worldNormals[0]);
-    glBufferSubData(GL_ARRAY_BUFFER,0,wt_size,&worldTex[0]);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), (GLvoid*)0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), (GLvoid*)(sizeof(float)*3));
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8*sizeof(float), (GLvoid*)(sizeof(float)*6));
 
-    glGenBuffers(1,&EBO);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER,wi_size,&worldIndices[0],GL_STATIC_DRAW);
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8*sizeof(GLuint), (void*)0);
-	glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8*sizeof(GLuint), (void*)(3*sizeof(GLuint)));
+    glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8*sizeof(GLuint), (void*)(6*sizeof(GLuint)));
 	glEnableVertexAttribArray(2);
+
+    glGenBuffers(1, &EBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, wi_size, worldIndices.data(), GL_DYNAMIC_DRAW);
+
+    GLint world_lightPos_id = glGetUniformLocation(worldShaderID, "lightPosition");
+    glUniform3fv(world_lightPos_id, 1, glm::value_ptr(lightPos));
+
+    GLint world_camPos_id = glGetUniformLocation(worldShaderID, "cameraPosition");
+    glUniform3fv(world_lightPos_id, 1, glm::value_ptr(cameraPosition));
+
+    GLint world_height_f = glGetUniformLocation(worldShaderID, "heightFactor");
+    glUniform1f(world_height_f, (GLfloat) heightFactor);
+
+    GLint world_img_w = glGetUniformLocation(worldShaderID, "imageWidth");
+    glUniform1f(world_img_w, (GLfloat) imageWidth);
+
+    GLint world_img_h = glGetUniformLocation(worldShaderID, "imageHeight");
+    glUniform1f(world_img_h, (GLfloat) imageHeight);
+
+
+    glm::mat4 worldModellingMatrix = glm::mat4(1); // TODO:Change???
+    glm::mat4 worldNormalMatrix = glm::mat4(1); // TODO:Change???
+
+    GLint world_pMat_id = glGetUniformLocation(worldShaderID, "ProjectionMatrix");
+    glUniformMatrix4fv(world_pMat_id, 1, GL_FALSE, glm::value_ptr(perspectiveMatrix));
+
+    GLint world_viewMat_id = glGetUniformLocation(worldShaderID, "ViewMatrix");
+    glUniformMatrix4fv(world_viewMat_id, 1, GL_FALSE, glm::value_ptr(camMatrix));
+
+    GLint world_normalMat_id = glGetUniformLocation(worldShaderID, "NormalMatrix");
+    glUniformMatrix4fv(world_normalMat_id, 1, GL_FALSE, glm::value_ptr(worldNormalMatrix));
+
+    GLint world_mvp_id = glGetUniformLocation(worldShaderID, "MVP");
+    glUniformMatrix4fv(world_mvp_id, 1, GL_FALSE, glm::value_ptr(worldModellingMatrix));
 
     // Enable depth test
     glEnable(GL_DEPTH_TEST);
@@ -200,8 +220,6 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
         glClearDepth(1.0f);
         glClearColor(0, 0, 0, 1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
-
 
         // TODO: Handle key presses
         handleKeyPress(window);
@@ -222,21 +240,21 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
         glBindVertexArray(moonVAO);
 
         // TODO: Draw moon object
-        glDrawElements(GL_TRIANGLES, moonVertices.size(), GL_UNSIGNED_INT, 0);
+        glDrawElements(GL_TRIANGLES, moonVertices.size(), GL_UNSIGNED_INT, (void*)0);
         /*************************/
 
         // TODO: Use worldShaderID program
-        //glUseProgram(worldShaderID);
+        glUseProgram(worldShaderID);
 
         // TODO: Update camera at every frame
 
         // TODO: Update uniform variables at every frame
 
         // TODO: Bind world vertex array
-        //glBindVertexArray(VAO);
+        glBindVertexArray(VAO);
 
         // TODO: Draw world object
-        //glDrawElements(GL_TRIANGLES, worldVertices.size(), GL_UNSIGNED_INT, 0);
+        glDrawElements(GL_TRIANGLES, worldVertices.size(), GL_UNSIGNED_INT, (void*)0);
 
 
         // Swap buffers and poll events
@@ -262,14 +280,16 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
     glfwTerminate();
 }
 
-void EclipseMap::handleKeyPress(GLFWwindow *window) {
+void EclipseMap::handleKeyPress(GLFWwindow *window)
+{
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, GLFW_TRUE);
     }
 
 }
 
-GLFWwindow *EclipseMap::openWindow(const char *windowName, int width, int height) {
+GLFWwindow *EclipseMap::openWindow(const char *windowName, int width, int height)
+{
     if (!glfwInit()) {
         getchar();
         return 0;
@@ -306,7 +326,8 @@ GLFWwindow *EclipseMap::openWindow(const char *windowName, int width, int height
 }
 
 
-void EclipseMap::initColoredTexture(const char *filename, GLuint shader) {
+void EclipseMap::initColoredTexture(const char *filename, GLuint shader)
+{
     int width, height;
     glGenTextures(1, &textureColor);
     cout << shader << endl;
@@ -387,8 +408,8 @@ void EclipseMap::initColoredTexture(const char *filename, GLuint shader) {
 
 }
 
-void EclipseMap::initGreyTexture(const char *filename, GLuint shader) {
-
+void EclipseMap::initGreyTexture(const char *filename, GLuint shader)
+{
     glGenTextures(1, &textureGrey);
     glBindTexture(GL_TEXTURE_2D, textureGrey);
     // set the texture wrapping parameters
@@ -466,7 +487,8 @@ void EclipseMap::initGreyTexture(const char *filename, GLuint shader) {
 
 }
 
-void EclipseMap::initMoonColoredTexture(const char *filename, GLuint shader) {
+void EclipseMap::initMoonColoredTexture(const char *filename, GLuint shader)
+{
     int width, height;
     glGenTextures(1, &moonTextureColor);
     cout << shader << endl;
@@ -529,8 +551,8 @@ void EclipseMap::initMoonColoredTexture(const char *filename, GLuint shader) {
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, raw_image);
 
 
-    imageWidth = width;
-    imageHeight = height;
+    moonImageWidth = width;
+    moonImageHeight = height;
 
     glGenerateMipmap(GL_TEXTURE_2D);
 

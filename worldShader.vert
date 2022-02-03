@@ -33,7 +33,7 @@ out vec3 CameraVector;// Vector from Vertex to Camera;
 
 void main()
 {
-
+    /*
     // Calculate texture coordinate based on data.TexCoord
     vec2 textureCoordinate = vec2(0, 0);
     vec4 texColor = texture(TexGrey, textureCoordinate);
@@ -52,5 +52,17 @@ void main()
     gl_Position = ProjectionMatrix * MVP * vec4(VertexPosition, 1);
 
     CameraVector = cameraPosition - data.Position;
-    LightVector = lightPosition - data.Position;
+    LightVector = lightPosition - data.Position;*/
+
+    vec4 pos = ProjectionMatrix * ViewMatrix * MVP * vec4(VertexPosition, 1);
+    vec4 normal = NormalMatrix * vec4(VertexNormal, 1);
+
+    LightVector = normalize(lightPosition - pos.xyz);
+    CameraVector = normalize(cameraPosition - pos.xyz);
+
+    data.Position = pos.xyz;
+    data.Normal = normal.xyz;
+    data.TexCoord = VertexTex;
+
+    gl_Position = pos;
 }

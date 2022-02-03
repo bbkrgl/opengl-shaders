@@ -17,25 +17,29 @@ uniform float textureOffset;
 
 out vec4 FragColor;
 
-vec3 ambientReflectenceCoefficient = vec3(1.0f);
-vec3 ambientLightColor = vec3(1.0f);
-vec3 specularReflectenceCoefficient= vec3(1.0f);
+vec3 ambientReflectenceCoefficient = vec3(0.5f);
+vec3 ambientLightColor = vec3(0.6f);
+vec3 specularReflectenceCoefficient = vec3(1.0f);
 vec3 specularLightColor = vec3(1.0f);
-float SpecularExponent = 1;
-vec3 diffuseReflectenceCoefficient= vec3(1.0f);
+float SpecularExponent = 10;
+vec3 diffuseReflectenceCoefficient = vec3(1.0f);
 vec3 diffuseLightColor = vec3(1.0f);
 
 
 void main()
 {
-    // Calculate texture coordinate based on data.TexCoord
-    vec2 textureCoordinate = vec2(0, 0);
-    vec4 texColor = texture(MoonTexColor, textureCoordinate);
+    vec2 texCoord = data.TexCoord;
+    vec4 texColor = texture(MoonTexColor, vec2(texCoord.x, texCoord.y));
 
-    vec3 ambient = vec3(0, 0, 1);
-    vec3 diffuse = vec3(0, 0, 1);
-    vec3 spec = vec3(0, 0, 1);
+    vec3 ambient = ambientLightColor*ambientReflectenceCoefficient;
 
-    FragColor = vec4(ambient+diffuse+spec, 1.0f);
+    float diff_c = max(dot(data.Normal, LightVector), 0.0);
+    //diffuseReflectenceCoefficient = texColor.xyz;
+    vec3 diffuse = diff_c*diffuseLightColor*diffuseReflectenceCoefficient; // TODO: Check if it is correct
 
+    vec3 r = reflect(-LightVector, data.Normal);
+    float spec = pow(max(dot(r, CameraVector), 0.0), SpecularExponent);
+    vec3 specular = spec*specularReflectenceCoefficient*specularLightColor;
+
+    FragColor = vec4((diffuse+ambient+spec)*texColor.xyz, 1.0);
 }

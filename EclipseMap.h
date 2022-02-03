@@ -50,6 +50,8 @@ private:
     glm::vec3 cameraUp = cameraStartUp;
     glm::vec3 cameraPosition = cameraStartPosition;
     glm::vec3 cameraDirection = cameraStartDirection;
+
+    void createSphere(int radius, glm::vec3 pos, vector<float>& vertices, vector<int>& indices);
 public:
     unsigned int textureColor;
     unsigned int textureGrey;
@@ -68,11 +70,11 @@ public:
     float moonImageWidth;
     float moonRadius = 162;
 
-    vector<GLfloat> worldVertices;
-    vector<GLuint> worldIndices;
+    vector<float> worldVertices;
+    vector<int> worldIndices;
 
-    vector<GLfloat> moonVertices;
-    vector<GLuint> moonIndices;
+    vector<float> moonVertices;
+    vector<int> moonIndices;
 
     GLFWwindow *openWindow(const char *windowName, int width, int height);
 
