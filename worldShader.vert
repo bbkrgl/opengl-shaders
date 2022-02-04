@@ -33,10 +33,10 @@ out vec3 CameraVector;// Vector from Vertex to Camera;
 
 void main()
 {
-    vec4 normal = NormalMatrix * vec4(VertexNormal, 1);
+    vec4 normal = normalize(NormalMatrix * vec4(VertexNormal, 1));
     vec4 height = (heightFactor * texture(TexGrey, VertexTex).x) * normal;
 
-    vec4 pos = ProjectionMatrix * ViewMatrix * MVP * vec4(VertexPosition + height.xyz, 1);
+    vec4 pos = vec4((MVP * vec4(VertexPosition, 1)).xyz + height.xyz, 1);
 
     LightVector = normalize(lightPosition - pos.xyz);
     CameraVector = normalize(cameraPosition - pos.xyz);
@@ -45,5 +45,5 @@ void main()
     data.Normal = normal.xyz;
     data.TexCoord = VertexTex;
 
-    gl_Position = pos;
+    gl_Position = ProjectionMatrix * ViewMatrix * pos;
 }

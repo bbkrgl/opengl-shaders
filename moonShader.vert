@@ -40,10 +40,10 @@ void main()
 
    // set gl_Position variable correctly to give the transformed vertex position
 
-    vec3 orbitPos = vec3(VertexPosition.x * cos(orbitDegree) - VertexPosition.y*sin(orbitDegree),
-            VertexPosition.x * sin(orbitDegree) + VertexPosition.y*cos(orbitDegree),
-            VertexPosition.z);
-    vec4 pos = ProjectionMatrix * ViewMatrix * MVP * vec4(orbitPos, 1);
+    vec4 pos = MVP * vec4(VertexPosition, 1);
+    pos = vec4(pos.x * cos(orbitDegree) - pos.y*sin(orbitDegree),
+            pos.x * sin(orbitDegree) + pos.y*cos(orbitDegree),
+            pos.z, 1);
     vec4 normal = NormalMatrix * vec4(VertexNormal, 1);
 
     LightVector = normalize(lightPosition - pos.xyz);
@@ -53,5 +53,5 @@ void main()
     data.Normal = normal.xyz;
     data.TexCoord = VertexTex;
 
-    gl_Position = pos;
+    gl_Position = ProjectionMatrix * ViewMatrix * pos;
 }

@@ -40,5 +40,5 @@ void main()
     float spec = pow(max(dot(H, data.Normal), 0.0), SpecularExponent);
     vec3 specular = spec*specularReflectenceCoefficient*specularLightColor;
 
-    FragColor = vec4((diffuse+ambient+spec)*texColor.xyz, 1.0);
+    FragColor = vec4((diffuse+ambient+specular)*texColor.xyz, 1.0);
 }

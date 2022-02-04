@@ -83,8 +83,6 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
     glActiveTexture(GL_TEXTURE2);
     initMoonColoredTexture(moonTexturePath, moonShaderID);
 
-    glm::mat4 perspectiveMatrix = glm::perspective(glm::radians(projectionAngle), aspectRatio, near, far);
-    glm::mat4 camMatrix = glm::lookAt(cameraPosition, cameraDirection, cameraUp);
 
     // Set moonVertices
     createSphere(moonRadius, glm::vec3(0,0,0), moonVertices, moonIndices);
@@ -114,30 +112,17 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
 
     GLint moon_lightPos_id = glGetUniformLocation(moonShaderID, "lightPosition");
     glUniform3fv(moon_lightPos_id, 1, glm::value_ptr(lightPos));
-
     GLint moon_camPos_id = glGetUniformLocation(moonShaderID, "cameraPosition");
-    glUniform3fv(moon_lightPos_id, 1, glm::value_ptr(cameraPosition));
-
-    GLint moon_height_f = glGetUniformLocation(moonShaderID, "heightFactor");
-    glUniform1f(moon_height_f, (GLfloat) heightFactor);
-
     GLint moon_img_w = glGetUniformLocation(moonShaderID, "imageWidth");
     glUniform1f(moon_img_w, (GLfloat) moonImageWidth);
-
     GLint moon_img_h = glGetUniformLocation(moonShaderID, "imageHeight");
     glUniform1f(moon_img_h, (GLfloat) moonImageHeight);
-
     GLint moon_pMat_id = glGetUniformLocation(moonShaderID, "ProjectionMatrix");
-    glUniformMatrix4fv(moon_pMat_id, 1, GL_FALSE, glm::value_ptr(perspectiveMatrix));
-
     GLint moon_viewMat_id = glGetUniformLocation(moonShaderID, "ViewMatrix");
-    glUniformMatrix4fv(moon_viewMat_id, 1, GL_FALSE, glm::value_ptr(camMatrix));
-
     GLint moon_normalMat_id = glGetUniformLocation(moonShaderID, "NormalMatrix");
     GLint moon_mvp_id = glGetUniformLocation(moonShaderID, "MVP");
-
-    float dO = glm::radians(0.02);
     GLint moon_orbitd_id = glGetUniformLocation(moonShaderID, "orbitDegree");
+
 
     // World commands
     // Load shaders
@@ -145,6 +130,7 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
 
     glActiveTexture(GL_TEXTURE0);
     initColoredTexture(coloredTexturePath, worldShaderID);
+
     glActiveTexture(GL_TEXTURE1);
     initGreyTexture(greyTexturePath, worldShaderID);
 
@@ -176,37 +162,27 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
 
     GLint world_lightPos_id = glGetUniformLocation(worldShaderID, "lightPosition");
     glUniform3fv(world_lightPos_id, 1, glm::value_ptr(lightPos));
-
     GLint world_camPos_id = glGetUniformLocation(worldShaderID, "cameraPosition");
-    glUniform3fv(world_lightPos_id, 1, glm::value_ptr(cameraPosition));
-
     GLint world_height_f = glGetUniformLocation(worldShaderID, "heightFactor");
-    glUniform1f(world_height_f, (GLfloat) heightFactor);
-
     GLint world_img_w = glGetUniformLocation(worldShaderID, "imageWidth");
     glUniform1f(world_img_w, (GLfloat) imageWidth);
-
     GLint world_img_h = glGetUniformLocation(worldShaderID, "imageHeight");
     glUniform1f(world_img_h, (GLfloat) imageHeight);
+    GLint world_pMat_id = glGetUniformLocation(worldShaderID, "ProjectionMatrix");
+    GLint world_viewMat_id = glGetUniformLocation(worldShaderID, "ViewMatrix");
+    GLint world_normalMat_id = glGetUniformLocation(worldShaderID, "NormalMatrix");
+    GLint world_mvp_id = glGetUniformLocation(worldShaderID, "MVP");
 
     float E = 0.0;
     float dE = 0.5/horizontalSplitCount;
-
-    GLint world_pMat_id = glGetUniformLocation(worldShaderID, "ProjectionMatrix");
-    glUniformMatrix4fv(world_pMat_id, 1, GL_FALSE, glm::value_ptr(perspectiveMatrix));
-
-    GLint world_viewMat_id = glGetUniformLocation(worldShaderID, "ViewMatrix");
-    glUniformMatrix4fv(world_viewMat_id, 1, GL_FALSE, glm::value_ptr(camMatrix));
-
-    GLint world_normalMat_id = glGetUniformLocation(worldShaderID, "NormalMatrix");
-    GLint world_mvp_id = glGetUniformLocation(worldShaderID, "MVP");
+    float dO = glm::radians(0.02);
 
     // Enable depth test
     glEnable(GL_DEPTH_TEST);
 
     // Main rendering loop
     do {
-        glViewport(0, 0, screenWidth, screenHeight);
+        glViewport(0, 0, screenWidth, screenHeight); // TODO: Change screen size - fullscreen
 
         glClearStencil(0);
         glClearDepth(1.0f);
@@ -220,13 +196,21 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
 
         // TODO: Update camera at every frame
 
+        glm::mat4 perspectiveMatrix = glm::perspective(glm::radians(projectionAngle), aspectRatio, near, far);
+        glm::mat4 camMatrix = glm::lookAt(cameraPosition, cameraDirection, cameraUp);
+
         glm::mat4 moonModellingMatrix = glm::rotate(glm::mat4(1), E, glm::vec3(0,0,1));
         glm::mat4 moonNormalMatrix = moonModellingMatrix;
         moonModellingMatrix = glm::translate(glm::mat4(1), glm::vec3(0,2600,0)) * moonModellingMatrix;
 
         glUniformMatrix4fv(moon_normalMat_id, 1, GL_FALSE, glm::value_ptr(moonNormalMatrix));
         glUniformMatrix4fv(moon_mvp_id, 1, GL_FALSE, glm::value_ptr(moonModellingMatrix));
-        glUniform1f(moon_orbitd_id, orbitDegree);
+        glUniform1f(moon_orbitd_id, (GLfloat) orbitDegree);
+
+        glUniform3fv(moon_camPos_id, 1, glm::value_ptr(cameraPosition));
+
+        glUniformMatrix4fv(moon_pMat_id, 1, GL_FALSE, glm::value_ptr(perspectiveMatrix));
+        glUniformMatrix4fv(moon_viewMat_id, 1, GL_FALSE, glm::value_ptr(camMatrix));
 
         orbitDegree += dO;
         if (orbitDegree >= 2*M_PI)
@@ -246,10 +230,18 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
 
         glUniformMatrix4fv(world_mvp_id, 1, GL_FALSE, glm::value_ptr(worldModellingMatrix));
         glUniformMatrix4fv(world_normalMat_id, 1, GL_FALSE, glm::value_ptr(worldNormalMatrix));
+        glUniform1f(world_height_f, (GLfloat) heightFactor);
+
+        glUniform3fv(world_camPos_id, 1, glm::value_ptr(cameraPosition));
+
+        glUniformMatrix4fv(world_pMat_id, 1, GL_FALSE, glm::value_ptr(perspectiveMatrix));
+        glUniformMatrix4fv(world_viewMat_id, 1, GL_FALSE, glm::value_ptr(camMatrix));
 
         E += dE;
         if (E >= 2*M_PI)
             E = 0.0;
+
+        cameraPosition += cameraDirection*speed;
 
         glBindVertexArray(VAO);
 
@@ -282,8 +274,44 @@ void EclipseMap::handleKeyPress(GLFWwindow *window)
 {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, GLFW_TRUE);
+    } else if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
+        heightFactor += 10;
+    } else if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS && heightFactor >= 0) {
+        heightFactor -= 10;
+    } else if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) { // TODO: Fix
+        glm::vec3 left = glm::normalize(glm::cross(cameraDirection, cameraUp));
+        float s = glm::radians(0.05);
+        glm::mat4 r_m = glm::rotate(glm::mat4(1), s, left);
+        cameraDirection = glm::normalize(r_m * glm::vec4(cameraDirection, 1));
+        cameraUp = glm::normalize(r_m * glm::vec4(cameraUp, 1));
+    } else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) { // TODO: Fix
+        glm::vec3 left = glm::normalize(glm::cross(cameraDirection, cameraUp));
+        float s = glm::radians(-0.05);
+        glm::mat4 r_m = glm::rotate(glm::mat4(1), s, left);
+        cameraDirection = glm::normalize(r_m * glm::vec4(cameraDirection, 1));
+        cameraUp = glm::normalize(r_m * glm::vec4(cameraUp, 1));
+    } else if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) { // TODO: Fix
+        float s = glm::radians(0.05);
+        glm::mat4 r_m = glm::rotate(glm::mat4(1), s, cameraUp);
+        cameraDirection = glm::normalize(r_m * glm::vec4(cameraDirection, 1));
+    } else if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) { // TODO: Fix
+        float s = glm::radians(-0.05);
+        glm::mat4 r_m = glm::rotate(glm::mat4(1), s, cameraUp);
+        cameraDirection = glm::normalize(r_m * glm::vec4(cameraDirection, 1));
+    } else if (glfwGetKey(window, GLFW_KEY_Y) == GLFW_PRESS) {
+        speed += 0.01;
+    } else if (glfwGetKey(window, GLFW_KEY_H) == GLFW_PRESS) {
+        speed -= 0.01;
+    } else if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS) {
+        speed = 0;
+    } else if (glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS) {
+        cameraDirection = cameraStartDirection;
+        cameraUp = cameraStartUp;
+        cameraPosition = cameraStartPosition;
+        speed = 0;
+    } else if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) { // TODO: Fix
+        displayFormat = displayFormatOptions::fullScreen;
     }
-
 }
 
 GLFWwindow *EclipseMap::openWindow(const char *windowName, int width, int height)
