@@ -83,7 +83,6 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
     glActiveTexture(GL_TEXTURE2);
     initMoonColoredTexture(moonTexturePath, moonShaderID);
 
-
     // Set moonVertices
     createSphere(moonRadius, glm::vec3(0,0,0), moonVertices, moonIndices);
 
@@ -182,7 +181,8 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
 
     // Main rendering loop
     do {
-        glViewport(0, 0, screenWidth, screenHeight); // TODO: Change screen size - fullscreen
+        glfwGetWindowSize(window, &screenWidth, &screenHeight);
+        glViewport(0, 0, screenWidth, screenHeight);
 
         glClearStencil(0);
         glClearDepth(1.0f);
@@ -194,8 +194,7 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
 
         glUseProgram(moonShaderID);
 
-        // TODO: Update camera at every frame
-
+        aspectRatio = ((float) screenWidth)/((float) screenHeight);
         glm::mat4 perspectiveMatrix = glm::perspective(glm::radians(projectionAngle), aspectRatio, near, far);
         glm::mat4 camMatrix = glm::lookAt(cameraPosition, cameraDirection, cameraUp);
 
@@ -222,8 +221,6 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
         /*************************/
 
         glUseProgram(worldShaderID);
-
-        // TODO: Update camera at every frame
 
         glm::mat4 worldModellingMatrix = glm::rotate(glm::mat4(1), E, glm::vec3(0,0,1));
         glm::mat4 worldNormalMatrix = worldModellingMatrix;
@@ -272,33 +269,39 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
 
 void EclipseMap::handleKeyPress(GLFWwindow *window)
 {
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, GLFW_TRUE);
-    } else if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
+
+    if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS)
         heightFactor += 10;
-    } else if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS && heightFactor >= 0) {
+    else if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS && heightFactor >= 0)
         heightFactor -= 10;
-    } else if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) { // TODO: Fix
-        glm::vec3 left = glm::normalize(glm::cross(cameraDirection, cameraUp));
+
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+        glm::vec3 left = glm::normalize(glm::cross(cameraDirection - cameraPosition, cameraUp));
         float s = glm::radians(0.05);
-        glm::mat4 r_m = glm::rotate(glm::mat4(1), s, left);
-        cameraDirection = glm::normalize(r_m * glm::vec4(cameraDirection, 1));
-        cameraUp = glm::normalize(r_m * glm::vec4(cameraUp, 1));
-    } else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) { // TODO: Fix
-        glm::vec3 left = glm::normalize(glm::cross(cameraDirection, cameraUp));
-        float s = glm::radians(-0.05);
-        glm::mat4 r_m = glm::rotate(glm::mat4(1), s, left);
-        cameraDirection = glm::normalize(r_m * glm::vec4(cameraDirection, 1));
-        cameraUp = glm::normalize(r_m * glm::vec4(cameraUp, 1));
-    } else if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) { // TODO: Fix
+        glm::mat3 r_m = glm::rotate(glm::mat4(1), s, left);
+        cameraDirection = r_m * (cameraDirection - cameraPosition) + cameraPosition;
+        cameraUp = glm::normalize(r_m * cameraUp);
+    } else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+        glm::vec3 left = glm::normalize(glm::cross(cameraPosition - cameraDirection, cameraUp));
         float s = glm::radians(0.05);
-        glm::mat4 r_m = glm::rotate(glm::mat4(1), s, cameraUp);
-        cameraDirection = glm::normalize(r_m * glm::vec4(cameraDirection, 1));
-    } else if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) { // TODO: Fix
+        glm::mat3 r_m = glm::rotate(glm::mat4(1), s, left);
+        cameraDirection = r_m * (cameraDirection - cameraPosition) + cameraPosition;
+        cameraUp = glm::normalize(r_m * cameraUp);
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+        float s = glm::radians(0.05);
+        glm::mat3 r_m = glm::rotate(glm::mat4(1), s, cameraUp);
+        cameraDirection = r_m * (cameraDirection - cameraPosition) + cameraPosition;
+    } else if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
         float s = glm::radians(-0.05);
-        glm::mat4 r_m = glm::rotate(glm::mat4(1), s, cameraUp);
-        cameraDirection = glm::normalize(r_m * glm::vec4(cameraDirection, 1));
-    } else if (glfwGetKey(window, GLFW_KEY_Y) == GLFW_PRESS) {
+        glm::mat3 r_m = glm::rotate(glm::mat4(1), s, cameraUp);
+        cameraDirection = r_m * (cameraDirection - cameraPosition) + cameraPosition;
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_Y) == GLFW_PRESS) {
         speed += 0.01;
     } else if (glfwGetKey(window, GLFW_KEY_H) == GLFW_PRESS) {
         speed -= 0.01;
@@ -309,8 +312,24 @@ void EclipseMap::handleKeyPress(GLFWwindow *window)
         cameraUp = cameraStartUp;
         cameraPosition = cameraStartPosition;
         speed = 0;
-    } else if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) { // TODO: Fix
-        displayFormat = displayFormatOptions::fullScreen;
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) {
+        if (displayFormat == displayFormatOptions::windowed && glfwGetKey(window, GLFW_KEY_P) == GLFW_RELEASE) {
+            GLFWmonitor* primary = glfwGetPrimaryMonitor();
+
+            screenWidth = glfwGetVideoMode(primary)->width;
+            screenHeight = glfwGetVideoMode(primary)->height;
+            glfwSetWindowMonitor(window, primary, 0, 0, screenWidth, screenHeight, GLFW_DONT_CARE);
+
+            displayFormat = displayFormatOptions::fullScreen;
+        } else if(glfwGetKey(window, GLFW_KEY_P) == GLFW_RELEASE) {
+            screenWidth = defaultScreenWidth;
+            screenHeight = defaultScreenHeight;
+            glfwSetWindowMonitor(window, NULL, 1, 31, screenWidth, screenHeight, GLFW_DONT_CARE);
+
+            displayFormat = displayFormatOptions::windowed;
+        }
     }
 }
 
