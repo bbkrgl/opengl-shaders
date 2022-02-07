@@ -4,10 +4,10 @@
 #include <vector>
 #include <GL/glew.h>
 #include <iostream>
-#include "glm/ext.hpp"
+#include "../glm/glm/ext.hpp"
 #include "Shader.h"
 #include <vector>
-#include "glm/glm.hpp"
+#include "../glm/glm/glm.hpp"
 #include <GLFW/glfw3.h>
 #include <jpeglib.h>
 #include <GL/glew.h>

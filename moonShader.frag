@@ -37,8 +37,8 @@ void main()
     vec3 diffuse = diff_c*diffuseLightColor*diffuseReflectenceCoefficient;
 
     vec3 H = normalize(CameraVector + LightVector);
-    float spec = pow(max(dot(H, CameraVector), 0.0), SpecularExponent);
+    float spec = pow(max(dot(H, data.Normal), 0.0), SpecularExponent);
     vec3 specular = spec*specularReflectenceCoefficient*specularLightColor;
 
-    FragColor = vec4((diffuse+ambient+spec)*texColor.xyz, 1.0);
+    FragColor = vec4((diffuse+ambient+specular)*texColor.xyz, 1.0);
 }

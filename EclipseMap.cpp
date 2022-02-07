@@ -189,7 +189,6 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
         glClearColor(0, 0, 0, 1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-        // TODO: Handle key presses
         handleKeyPress(window);
 
         glUseProgram(moonShaderID);
@@ -204,7 +203,7 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
 
         glUniformMatrix4fv(moon_normalMat_id, 1, GL_FALSE, glm::value_ptr(moonNormalMatrix));
         glUniformMatrix4fv(moon_mvp_id, 1, GL_FALSE, glm::value_ptr(moonModellingMatrix));
-        glUniform1f(moon_orbitd_id, (GLfloat) orbitDegree);
+        glUniform1f(moon_orbitd_id, (GLfloat) -orbitDegree);
 
         glUniform3fv(moon_camPos_id, 1, glm::value_ptr(cameraPosition));
 
@@ -238,7 +237,7 @@ void EclipseMap::Render(const char *coloredTexturePath, const char *greyTextureP
         if (E >= 2*M_PI)
             E = 0.0;
 
-        cameraPosition += cameraDirection*speed;
+        cameraPosition += glm::normalize(cameraDirection - cameraPosition)*speed;
 
         glBindVertexArray(VAO);
 

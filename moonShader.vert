@@ -45,6 +45,10 @@ void main()
             pos.x * sin(orbitDegree) + pos.y*cos(orbitDegree),
             pos.z, 1);
     vec4 normal = NormalMatrix * vec4(VertexNormal, 1);
+    normal = vec4(normal.x * cos(orbitDegree) - normal.y*sin(orbitDegree),
+            normal.x * sin(orbitDegree) + normal.y*cos(orbitDegree),
+            normal.z, 1);
+
 
     LightVector = normalize(lightPosition - pos.xyz);
     CameraVector = normalize(cameraPosition - pos.xyz);
